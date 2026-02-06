@@ -86,21 +86,21 @@ export function MasterPrompt({
   };
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.015] overflow-hidden">
+    <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden shadow-sm">
       {/* Header — always visible */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.01] transition-colors"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-accent/60 transition-colors"
       >
         <div className="flex items-center gap-2.5">
-          <div className="h-6 w-6 rounded-md bg-gradient-to-br from-violet-500/20 to-cyan-500/20 border border-white/[0.06] flex items-center justify-center">
-            <Sparkles className="h-3 w-3 text-violet-300/60" />
+          <div className="h-8 w-8 rounded-xl bg-[var(--brand)] border border-black/5 flex items-center justify-center shadow-sm">
+            <Sparkles className="h-4 w-4 text-[var(--brand-foreground)]" />
           </div>
           <div className="text-left">
-            <h2 className="text-xs font-medium tracking-tight text-white/80">
-              Master Prompt
-              <span className="ml-2 text-[10px] font-mono text-white/25">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              Master prompt
+              <span className="ml-2 text-[10px] font-mono text-muted-foreground">
                 {isI2V
                   ? "image analysis + prompts"
                   : "grok-4-1-fast"}
@@ -109,19 +109,19 @@ export function MasterPrompt({
           </div>
         </div>
         {isExpanded ? (
-          <ChevronUp className="h-3.5 w-3.5 text-white/20" />
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
         ) : (
-          <ChevronDown className="h-3.5 w-3.5 text-white/20" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
         )}
       </button>
 
       {/* Expandable content */}
       {isExpanded && (
-        <div className="px-4 pb-4 space-y-3">
+        <div className="px-5 pb-5 space-y-4">
           <div className="space-y-1.5">
             <Label
               htmlFor="master-prompt"
-              className="text-[10px] text-white/35 font-mono uppercase tracking-wider"
+              className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider"
             >
               Ad Concept
             </Label>
@@ -135,13 +135,13 @@ export function MasterPrompt({
               value={masterPrompt}
               onChange={(e) => setMasterPrompt(e.target.value)}
               disabled={disabled || isGenerating}
-              className="min-h-[90px] resize-none bg-white/[0.03] border-white/[0.06] text-sm text-white/90 placeholder:text-white/15 focus:border-white/20 focus:bg-white/[0.05] transition-all duration-200"
+              className="min-h-[110px] resize-none bg-background/40 border-border/70 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-foreground/30 focus:bg-background/55 transition-all duration-200 rounded-2xl"
             />
           </div>
 
           {/* Error */}
           {error && (
-            <p className="text-xs text-red-400/80 font-mono">{error}</p>
+            <p className="text-xs text-red-700/80 font-mono">{error}</p>
           )}
 
           {/* Generate button */}
@@ -149,7 +149,9 @@ export function MasterPrompt({
             <Button
               onClick={handleGenerate}
               disabled={!masterPrompt.trim() || isGenerating || disabled}
-              className="h-8 px-4 bg-white/[0.06] text-white/70 text-[11px] font-medium tracking-tight hover:bg-white/[0.12] hover:text-white disabled:opacity-30 transition-all duration-200 gap-1.5 border border-white/[0.08] rounded-md"
+              variant="brand"
+              size="sm"
+              className="h-9 px-4 text-[12px] font-semibold tracking-tight transition-all duration-200 gap-1.5 rounded-2xl shadow-sm disabled:opacity-40"
             >
               {isGenerating ? (
                 <>
@@ -169,7 +171,7 @@ export function MasterPrompt({
             </Button>
 
             {isGenerating && (
-              <span className="text-[10px] font-mono text-white/20">
+              <span className="text-[10px] font-mono text-muted-foreground">
                 {isI2V && imagesToAnalyze.length > 0
                   ? "Grok is analyzing your images and crafting motion prompts..."
                   : "Grok is crafting your ad sequence..."}

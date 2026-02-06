@@ -321,29 +321,29 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/70 bg-background/70 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-md bg-white flex items-center justify-center">
-              <Zap className="h-4 w-4 text-black" />
+            <div className="h-7 w-7 rounded-lg bg-[var(--brand)] flex items-center justify-center shadow-sm ring-1 ring-black/5">
+              <Zap className="h-4 w-4 text-[var(--brand-foreground)]" />
             </div>
-            <span className="text-sm font-semibold tracking-tight">
+            <span className="text-sm font-semibold tracking-tight text-foreground">
               Grok Imagine
             </span>
-            <span className="text-[10px] font-mono text-white/30 border border-white/10 rounded px-1.5 py-0.5">
+            <span className="text-[10px] font-mono text-muted-foreground border border-border/70 rounded px-1.5 py-0.5 bg-card/40">
               AD GEN
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-[11px] font-mono text-white/30 hidden sm:block">
+            <span className="text-[11px] font-mono text-muted-foreground hidden sm:block">
               Powered by FAL Workflows
             </span>
-            <Separator orientation="vertical" className="h-4 bg-white/10" />
+            <Separator orientation="vertical" className="h-4" />
             <a
               href="https://fal.ai"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-mono text-white/40 hover:text-white/70 transition-colors"
+              className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
             >
               fal.ai
             </a>
@@ -357,32 +357,41 @@ export default function Home() {
         <section className="pb-16">
           <div className="max-w-6xl mx-auto px-6">
             {/* Hero row — tight, inline */}
-            <div className="pt-8 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div className="pt-10 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
               <div className="flex items-center gap-4">
-                <div className="hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 border border-white/[0.06]">
-                  <Film className="h-5 w-5 text-violet-300/70" />
+                <div className="hidden md:flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-card/60 border border-border/70 shadow-sm">
+                  <Film className="h-5 w-5 text-foreground/80" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-semibold tracking-tight leading-tight">
-                    Generate Ad Videos
-                    <span className="ml-2 text-[10px] font-mono text-white/25 align-middle border border-white/[0.08] rounded px-1.5 py-0.5">
-                      3 Parallel Clips
-                    </span>
+                  <h1 className="font-display text-3xl md:text-[40px] font-semibold tracking-tight leading-[1.05] text-foreground">
+                    Generate ad videos.
                   </h1>
-                  <p className="text-[13px] text-white/35 mt-0.5">
-                    Describe a concept, let Grok craft scene prompts, generate with xAI Imagine Video.
+                  <p className="text-[14px] md:text-[15px] text-muted-foreground mt-2 max-w-[60ch]">
+                    Turn a concept into three parallel clips. Grok drafts the
+                    shots, FAL runs the workflow, you download and edit.
                   </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full border border-border/70 bg-card/50 px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
+                      3 shots
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-border/70 bg-card/50 px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
+                      parallel generation
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-border/70 bg-card/50 px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
+                      {isI2V ? "image-to-video" : "text-to-video"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Mode Toggle — right-aligned */}
-              <div className="inline-flex items-center rounded-lg border border-white/[0.08] bg-white/[0.02] p-1 shrink-0">
+              <div className="inline-flex items-center rounded-2xl border border-border/70 bg-card/60 p-1.5 shrink-0 shadow-sm">
                 <button
                   type="button"
                   onClick={() => handleModeChange("text-to-video")}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${!isI2V
-                      ? "bg-white text-black"
-                      : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${!isI2V
+                      ? "bg-[var(--brand)] text-[var(--brand-foreground)] shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     }`}
                 >
                   <Type className="h-3.5 w-3.5" />
@@ -391,9 +400,9 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => handleModeChange("image-to-video")}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${isI2V
-                      ? "bg-white text-black"
-                      : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${isI2V
+                      ? "bg-[var(--brand)] text-[var(--brand-foreground)] shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     }`}
                 >
                   <ImageIcon className="h-3.5 w-3.5" />
@@ -402,7 +411,7 @@ export default function Home() {
               </div>
             </div>
 
-            <Separator className="bg-white/[0.06]" />
+            <Separator className="opacity-70" />
 
             {/* Master Prompt */}
             <div className="mt-6 mb-6">
@@ -415,11 +424,11 @@ export default function Home() {
             </div>
 
             {/* Clip Forms */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {clips.map((clip, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-4 transition-colors hover:border-white/[0.12] hover:bg-white/[0.025]"
+                  className="rounded-2xl border border-border/70 bg-card/60 p-5 shadow-sm transition-colors hover:bg-card/75"
                 >
                   <ClipForm
                     index={i}
@@ -435,9 +444,9 @@ export default function Home() {
 
             {/* Aspect ratio mismatch warning */}
             {hasAspectRatioMismatch && !isGenerating && (
-              <div className="mt-6 flex items-start gap-3 p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/[0.05]">
-                <AlertCircle className="h-4 w-4 text-yellow-400/70 mt-0.5 shrink-0" />
-                <p className="text-sm text-yellow-400/80">
+              <div className="mt-6 flex items-start gap-3 p-4 rounded-2xl border border-border/70 bg-card/60 shadow-sm">
+                <AlertCircle className="h-4 w-4 text-foreground/70 mt-0.5 shrink-0" />
+                <p className="text-sm text-foreground/80">
                   Clips have different aspect ratios — the final ad may look
                   inconsistent when combined.
                 </p>
@@ -446,11 +455,11 @@ export default function Home() {
 
             {/* Error */}
             {error && (
-              <div className="mt-6 flex items-start gap-3 p-4 rounded-lg border border-red-500/20 bg-red-500/[0.05]">
-                <AlertCircle className="h-4 w-4 text-red-400/70 mt-0.5 shrink-0" />
+              <div className="mt-6 flex items-start gap-3 p-4 rounded-2xl border border-red-500/20 bg-red-500/[0.06]">
+                <AlertCircle className="h-4 w-4 text-red-600/80 mt-0.5 shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-sm text-red-400/90">{error}</p>
-                  <p className="text-xs text-red-400/50 font-mono">
+                  <p className="text-sm text-red-700/90">{error}</p>
+                  <p className="text-xs text-red-700/60 font-mono">
                     Make sure your FAL_KEY and XAI_API_KEY are set in your
                     environment variables.
                   </p>
@@ -464,7 +473,8 @@ export default function Home() {
                 onClick={handleGenerate}
                 disabled={!canGenerate}
                 size="lg"
-                className="h-10 px-7 bg-white text-black font-medium text-sm tracking-tight hover:bg-white/90 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 transition-all duration-200 gap-2 rounded-lg"
+                variant="brand"
+                className="h-11 px-7 font-medium text-sm tracking-tight transition-all duration-200 gap-2 rounded-2xl shadow-sm disabled:opacity-40"
               >
                 {isGenerating ? (
                   <>
@@ -480,7 +490,7 @@ export default function Home() {
               </Button>
 
               {!canGenerate && !isGenerating && (
-                <span className="text-[11px] font-mono text-white/20">
+                <span className="text-[11px] font-mono text-muted-foreground">
                   {isI2V
                     ? "All 3 prompts + images required"
                     : "All 3 prompts required"}
@@ -488,11 +498,11 @@ export default function Home() {
               )}
 
               <div className="flex items-center gap-3 ml-auto">
-                <span className="text-[11px] font-mono text-white/30 tabular-nums">
+                <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
                   Total: {totalDuration}s
                 </span>
                 {hasDurationImbalance && (
-                  <span className="text-[11px] font-mono text-yellow-400/60">
+                  <span className="text-[11px] font-mono text-foreground/70">
                     Uneven clip lengths
                   </span>
                 )}
@@ -512,10 +522,10 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.06] py-6">
+      <footer className="border-t border-border/70 py-6 bg-background/40 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-mono text-white/20">
+            <span className="text-[11px] font-mono text-muted-foreground">
               Grok Imagine Ad Generator
             </span>
           </div>
@@ -524,7 +534,7 @@ export default function Home() {
               href="https://docs.fal.ai"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-mono text-white/20 hover:text-white/50 transition-colors"
+              className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
             >
               Docs
             </a>
@@ -532,7 +542,7 @@ export default function Home() {
               href="https://fal.ai/models/xai/grok-imagine-video/text-to-video"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-mono text-white/20 hover:text-white/50 transition-colors"
+              className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
             >
               Model
             </a>

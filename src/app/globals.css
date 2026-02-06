@@ -8,6 +8,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-space-grotesk);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,38 +48,53 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  --background: #000000;
-  --foreground: #fafafa;
-  --card: #0a0a0a;
-  --card-foreground: #fafafa;
-  --popover: #0a0a0a;
-  --popover-foreground: #fafafa;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #111111;
-  --secondary-foreground: #fafafa;
-  --muted: #111111;
-  --muted-foreground: #666666;
-  --accent: #111111;
-  --accent-foreground: #fafafa;
-  --destructive: #ef4444;
-  --border: #1a1a1a;
-  --input: #1a1a1a;
-  --ring: #333333;
-  --chart-1: #3b82f6;
-  --chart-2: #22c55e;
-  --chart-3: #eab308;
-  --chart-4: #a855f7;
-  --chart-5: #ef4444;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #fafafa;
-  --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #111111;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #1a1a1a;
-  --sidebar-ring: #333333;
+  /* Art direction: "Studio desk" (warm paper + ink) with a neon-lime brand accent. */
+  --radius: 0.9rem;
+
+  --background: #f6f2ea;
+  --foreground: #111318;
+
+  --card: #fffdf8;
+  --card-foreground: #111318;
+  --popover: #ffffff;
+  --popover-foreground: #111318;
+
+  --primary: #111318;
+  --primary-foreground: #f6f2ea;
+
+  --secondary: #ece7de;
+  --secondary-foreground: #111318;
+  --muted: #ece7de;
+  --muted-foreground: #5c5f66;
+  --accent: #ece7de;
+  --accent-foreground: #111318;
+
+  --destructive: #dc2626;
+  --border: #d8d2c7;
+  --input: #d8d2c7;
+  --ring: #2962ff;
+
+  /* Brand accent (used via arbitrary values in components). */
+  --brand: #d7ff2f;
+  --brand-hover: #c8f31d;
+  --brand-foreground: #111318;
+  --brand-ink: #2962ff;
+
+  --chart-1: #2962ff;
+  --chart-2: #16a34a;
+  --chart-3: #d7ff2f;
+  --chart-4: #7c3aed;
+  --chart-5: #dc2626;
+
+  /* Sidebar tokens kept for shadcn compatibility (not used on this page). */
+  --sidebar: #fffdf8;
+  --sidebar-foreground: #111318;
+  --sidebar-primary: #111318;
+  --sidebar-primary-foreground: #f6f2ea;
+  --sidebar-accent: #ece7de;
+  --sidebar-accent-foreground: #111318;
+  --sidebar-border: #d8d2c7;
+  --sidebar-ring: #2962ff;
 }
 
 @layer base {
@@ -91,16 +107,43 @@
   }
 }
 
-/* Top accent line */
-body::before {
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+/* App background: layered paper, ink bloom, and a subtle grid. */
+.app-bg {
+  position: relative;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(41, 98, 255, 0.20), transparent 60%),
+    radial-gradient(900px 560px at 88% -12%, rgba(215, 255, 47, 0.22), transparent 58%),
+    radial-gradient(900px 620px at 50% 120%, rgba(17, 19, 24, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.15));
+}
+
+.app-bg::after {
   content: "";
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), rgba(6, 182, 212, 0.4), transparent);
-  z-index: 100;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    /* soft grid */
+    linear-gradient(rgba(17, 19, 24, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 19, 24, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px, 56px 56px;
+  opacity: 0.35;
+  mask-image: radial-gradient(60% 55% at 50% 28%, black, transparent 70%);
+}
+
+/* Keep content above the fixed background layers. */
+main,
+nav,
+footer {
+  position: relative;
+  z-index: 1;
 }
 
 /* Custom scrollbar */
@@ -114,17 +157,17 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgba(17, 19, 24, 0.28);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(17, 19, 24, 0.40);
 }
 
 /* Smooth focus rings */
 *:focus-visible {
-  outline: 1px solid #444;
+  outline: 2px solid rgba(41, 98, 255, 0.45);
   outline-offset: 2px;
 }
 
@@ -136,9 +179,9 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.015;
+  opacity: 0.03;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 2;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -203,7 +246,11 @@ body::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(60% 50% at 50% 40%, rgba(234, 179, 8, 0.12), transparent 70%);
+  background: radial-gradient(
+    60% 50% at 50% 40%,
+    rgba(215, 255, 47, 0.16),
+    transparent 70%
+  );
   pointer-events: none;
 }
 
@@ -218,7 +265,12 @@ body::before {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, #333 0%, transparent 50%, #333 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(17, 19, 24, 0.18) 0%,
+    transparent 50%,
+    rgba(17, 19, 24, 0.18) 100%
+  );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
