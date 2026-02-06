@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { put } from "@vercel/blob";
 import {
-    chat,
     chatJSON,
     generateImage,
     submitTextToVideo,
@@ -69,11 +68,12 @@ const SCENE_SYSTEMS = [SCENE_1_SYSTEM, SCENE_2_SYSTEM, SCENE_3_SYSTEM];
 
 // ─── Scene Decision Schema ───────────────────────────────────────────────────
 
-function getDecisionSchema(sceneNumber: number) {
-    const methods: GenerationMethod[] =
-        sceneNumber === 1
-            ? ["text-to-video", "image-then-video"]
-            : ["text-to-video", "image-then-video", "edit-video"];
+function getDecisionSchema(sceneNumber: number, canEditVideo: boolean) {
+    const methods: GenerationMethod[] = sceneNumber === 1
+        ? ["text-to-video", "image-then-video"]
+        : canEditVideo
+            ? ["text-to-video", "image-then-video", "edit-video"]
+            : ["text-to-video", "image-then-video"];
 
     return {
         type: "json_schema" as const,
@@ -120,19 +120,38 @@ function sendEvent(
 }
 
 const STEP_TIMEOUT_MS = 120_000; // 120 seconds per step
-const POLL_TIMEOUT_MS = 600_000; // 10 minutes for video generation
+const POLL_INTERVAL_MS = 5_000;
+const POLL_MAX_ATTEMPTS = 180; // 15 minutes at 5s interval
+// Keep the route timeout slightly above the poll loop so we never cut it short.
+const POLL_TIMEOUT_MS = POLL_INTERVAL_MS * POLL_MAX_ATTEMPTS + 30_000;
 
 /** Wrap a promise with a timeout */
-function withTimeout<T>(promise: Promise<T>, label: string, ms = STEP_TIMEOUT_MS): Promise<T> {
+function withTimeout<T>(
+    promise: Promise<T>,
+    label: string,
+    ms: number,
+    onTimeout?: () => void,
+): Promise<T> {
     return new Promise<T>((resolve, reject) => {
         const timer = setTimeout(
-            () => reject(new Error(`${label} timed out after ${ms / 1000}s`)),
+            () => {
+                try { onTimeout?.(); } catch { /* ignore */ }
+                reject(new Error(`${label} timed out after ${ms / 1000}s`));
+            },
             ms,
         );
         promise
             .then((v) => { clearTimeout(timer); resolve(v); })
             .catch((e) => { clearTimeout(timer); reject(e); });
     });
+}
+
+function withStepTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+    return withTimeout(promise, label, STEP_TIMEOUT_MS);
+}
+
+function withPollTimeout<T>(promise: Promise<T>, label: string, onTimeout?: () => void): Promise<T> {
+    return withTimeout(promise, label, POLL_TIMEOUT_MS, onTimeout);
 }
 
 /**
@@ -166,16 +185,6 @@ async function persistToBlob(
     }
 }
 
-/** Fetch a video URL and extract a frame as a data URI for Grok vision */
-async function extractFrameUrl(videoUrl: string): Promise<string> {
-    // For xAI vision, we can pass the video URL directly — Grok can understand
-    // video frames from URLs. But if we need a still image, we just pass the URL
-    // and ask Grok to analyze "the visual style of this video".
-    // The xAI API supports image URLs for vision — we'll use the video URL
-    // and let Grok's vision model handle it.
-    return videoUrl;
-}
-
 // ─── Main Pipeline ───────────────────────────────────────────────────────────
 
 async function runPipeline(
@@ -186,6 +195,7 @@ async function runPipeline(
     const { concept, duration = 6, aspect_ratio = "16:9", resolution = "720p" } = input;
     console.log("[pipeline] ═══ STARTING ═══", { concept: concept.slice(0, 60), duration, aspect_ratio, resolution });
     const startTime = Date.now();
+    const canEditVideo = duration <= 8; // xAI video edits require input videos <= 8.7s; be conservative.
 
     const sceneResults: Array<{
         videoUrl: string;
@@ -206,19 +216,26 @@ async function runPipeline(
 
         // Build user message with context from previous scenes
         const userParts: Array<Record<string, unknown>> = [];
-        const settingsText = `Settings: duration=${duration}s, aspect_ratio=${aspect_ratio}, resolution=${resolution}. IMPORTANT: Do not mention any other duration. If you mention seconds in the prompt, it MUST be exactly ${duration}s.`;
+        const settingsText =
+            `Settings: duration=${duration}s, aspect_ratio=${aspect_ratio}, resolution=${resolution}. IMPORTANT: Do not mention any other duration. If you mention seconds in the prompt, it MUST be exactly ${duration}s.` +
+            (canEditVideo ? "" : ` NOTE: "edit-video" is not available at ${duration}s (xAI edits require input videos <= 8.7s).`);
 
-        // Add frames from previous scenes for vision analysis
+        // Add reference images from previous scenes (only if we have an actual image URL).
+        // Passing a video URL as an image input can 422 due to schema validation.
         for (const prev of sceneResults) {
-            const frameRef = await extractFrameUrl(prev.videoUrl);
-            userParts.push({
-                type: "input_image",
-                image_url: frameRef,
-                detail: "high",
-            });
+            if (prev.imageUrl) {
+                userParts.push({
+                    type: "input_image",
+                    image_url: { url: prev.imageUrl },
+                    detail: "high",
+                });
+            }
             userParts.push({
                 type: "input_text",
-                text: `[Scene ${sceneResults.indexOf(prev) + 1} — method: ${prev.method}]\nPrompt used: "${prev.decision.video_prompt}"`,
+                text:
+                    `[Scene ${sceneResults.indexOf(prev) + 1} — method: ${prev.method}]\n` +
+                    `Video URL: ${prev.videoUrl}\n` +
+                    `Prompt used: "${prev.decision.video_prompt}"`,
             });
         }
 
@@ -232,17 +249,22 @@ async function runPipeline(
                 }`,
         });
 
-        const decision = await withTimeout(
+        const userContent =
+            sceneResults.length > 0
+                ? userParts
+                : `Ad concept: ${concept}\n${settingsText}\n\nDecide the best generation method for Scene 1 of 3. This is the HOOK — grab attention immediately.`;
+
+        const decision = await withStepTimeout(
             chatJSON<SceneDecision>({
                 messages: [
                     { role: "system", content: SCENE_SYSTEMS[sceneNum - 1] },
                     {
                         role: "user",
-                        content: sceneResults.length > 0 ? userParts : `Ad concept: ${concept}\n${settingsText}\n\nDecide the best generation method for Scene 1 of 3. This is the HOOK — grab attention immediately.`,
+                        content: userContent,
                     },
                 ],
                 temperature: 0.7,
-                response_format: getDecisionSchema(sceneNum),
+                response_format: getDecisionSchema(sceneNum, canEditVideo),
             }),
             `Scene ${sceneNum} planning`,
         );
@@ -272,7 +294,7 @@ async function runPipeline(
                     scene: sceneNum,
                     message: "Generating video from text...",
                 });
-                videoRequestId = await withTimeout(
+                videoRequestId = await withStepTimeout(
                     submitTextToVideo({
                         prompt: decision.video_prompt,
                         duration,
@@ -291,7 +313,7 @@ async function runPipeline(
                     message: "Generating reference image...",
                 });
 
-                const imgResult = await withTimeout(
+                const imgResult = await withStepTimeout(
                     generateImage({
                         prompt: decision.image_prompt || decision.video_prompt,
                         aspect_ratio,
@@ -311,7 +333,7 @@ async function runPipeline(
                     data: { image_url: imageUrl },
                 });
 
-                videoRequestId = await withTimeout(
+                videoRequestId = await withStepTimeout(
                     submitImageToVideo({
                         prompt: decision.video_prompt,
                         image_url: imageUrl,
@@ -334,7 +356,7 @@ async function runPipeline(
                     message: "Editing previous scene...",
                 });
 
-                videoRequestId = await withTimeout(
+                videoRequestId = await withStepTimeout(
                     submitVideoEdit({
                         prompt: decision.video_prompt,
                         video_url: prevVideo.videoUrl,
@@ -352,16 +374,23 @@ async function runPipeline(
             message: "Waiting for video generation...",
         });
 
-        const videoResult = await withTimeout(
-            pollVideo(videoRequestId, (state) => {
-                sendEvent(controller, encoder, {
-                    type: "video_polling",
-                    scene: sceneNum,
-                    message: `Video status: ${state}`,
-                });
-            }),
+        const pollAbort = new AbortController();
+        const videoResult = await withPollTimeout(
+            pollVideo(
+                videoRequestId,
+                (state) => {
+                    sendEvent(controller, encoder, {
+                        type: "video_polling",
+                        scene: sceneNum,
+                        message: `Video status: ${state}`,
+                    });
+                },
+                POLL_MAX_ATTEMPTS,
+                POLL_INTERVAL_MS,
+                pollAbort.signal,
+            ),
             `Scene ${sceneNum} video polling`,
-            POLL_TIMEOUT_MS,
+            () => pollAbort.abort(),
         );
 
         // Persist video to Vercel Blob

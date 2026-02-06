@@ -20,6 +20,7 @@ function headers() {
     const key = process.env.XAI_API_KEY;
     if (!key) throw new Error("XAI_API_KEY is not configured");
     return {
+        Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
     };
@@ -132,41 +133,117 @@ export async function pollVideo(
     onProgress?: (state: string) => void,
     maxAttempts = 180,       // ~15 min at 5s interval
     intervalMs = 5000,
+    signal?: AbortSignal,
 ): Promise<VideoResult> {
+    const asRecord = (v: unknown): Record<string, unknown> | undefined =>
+        v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+    const asString = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+    const asNumber = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined);
+
     console.log(`[xai] pollVideo started for ${requestId}`);
     for (let i = 0; i < maxAttempts; i++) {
+        if (signal?.aborted) throw new Error("Video polling aborted");
+
         const res = await fetch(`${BASE}/videos/${requestId}`, {
             headers: headers(),
+            signal,
         });
+
+        // Some APIs may temporarily return 404/202 before the deferred result exists.
+        if (res.status === 404 || res.status === 202) {
+            onProgress?.("pending");
+            await new Promise((r) => setTimeout(r, intervalMs));
+            continue;
+        }
+
+        const txt = await res.text();
         if (!res.ok) {
-            const txt = await res.text();
             console.error(`[xai] pollVideo FAILED attempt ${i + 1}`, res.status, txt);
             throw new Error(`xAI poll error ${res.status}: ${txt}`);
         }
-        const data = await res.json();
-        const state = data.state || data.status || data?.result?.state;
-        const url = data.url || data?.result?.url || data?.output?.url;
-        console.log(`[xai] pollVideo attempt ${i + 1}/${maxAttempts} — status: ${res.status}, state: ${state}, url: ${url ? "yes" : "no"}`);
-        if (!state && !url && (i < 3 || i % 5 === 0)) {
-            console.log("[xai] pollVideo raw response:", JSON.stringify(data).slice(0, 400));
+
+        let data: unknown = {};
+        try {
+            data = txt ? JSON.parse(txt) : {};
+        } catch {
+            // Treat non-JSON/empty as "still processing".
+            data = {};
         }
 
-        if (state === "failed") {
-            console.error("[xai] pollVideo — generation FAILED:", data.error);
-            throw new Error(`Video generation failed: ${data.error || "unknown error"}`);
+        const root = asRecord(data) ?? {};
+        const dataObj = asRecord(root["data"]);
+        const dataArr = Array.isArray(root["data"]) ? (root["data"] as unknown[]) : undefined;
+        const dataFirstObj = dataArr ? asRecord(dataArr[0]) : undefined;
+        const resultObj = asRecord(root["result"]);
+        const videoObj = asRecord(root["video"]);
+        const outputField = root["output"];
+        const outputObj = asRecord(outputField);
+        const outputFirstObj = Array.isArray(outputField) ? asRecord(outputField[0]) : undefined;
+
+        const state: string | undefined =
+            asString(root["state"]) ??
+            asString(root["status"]) ??
+            asString(dataObj?.["state"]) ??
+            asString(dataObj?.["status"]) ??
+            asString(resultObj?.["state"]) ??
+            asString(resultObj?.["status"]) ??
+            asString(videoObj?.["state"]) ??
+            asString(videoObj?.["status"]);
+
+        const url: string | undefined =
+            asString(root["url"]) ??
+            asString(dataObj?.["url"]) ??
+            asString(dataFirstObj?.["url"]) ??
+            asString(resultObj?.["url"]) ??
+            asString(videoObj?.["url"]) ??
+            asString(outputObj?.["url"]) ??
+            asString(outputFirstObj?.["url"]);
+
+        const err = root["error"] ?? dataObj?.["error"] ?? resultObj?.["error"];
+
+        console.log(
+            `[xai] pollVideo attempt ${i + 1}/${maxAttempts} — status: ${res.status}, state: ${state}, url: ${url ? "yes" : "no"}`,
+        );
+        if (!state && !url && (i < 3 || i % 5 === 0)) {
+            console.log("[xai] pollVideo raw response:", JSON.stringify(root).slice(0, 400));
+        }
+
+        if (
+            state === "failed" ||
+            state === "error" ||
+            state === "cancelled" ||
+            (err && !url && state !== "pending" && state !== "processing")
+        ) {
+            console.error("[xai] pollVideo — generation FAILED:", err || data);
+            const errText =
+                typeof err === "string" ? err : err ? JSON.stringify(err) : "unknown error";
+            throw new Error(`Video generation failed: ${errText}`);
         }
 
         onProgress?.(state || "processing");
 
-        if (url) {
+        if (typeof url === "string" && url.length > 0) {
+            const duration =
+                asNumber(root["duration"]) ??
+                asNumber(dataObj?.["duration"]) ??
+                asNumber(resultObj?.["duration"]);
+            const width =
+                asNumber(root["width"]) ??
+                asNumber(dataObj?.["width"]) ??
+                asNumber(resultObj?.["width"]);
+            const height =
+                asNumber(root["height"]) ??
+                asNumber(dataObj?.["height"]) ??
+                asNumber(resultObj?.["height"]);
+
             console.log(`[xai] pollVideo ← COMPLETE url: ${url.slice(0, 80)}...`);
             return {
                 url,
                 request_id: requestId,
                 state: "completed",
-                duration: data.duration,
-                width: data.width,
-                height: data.height,
+                duration,
+                width,
+                height,
             };
         }
 
