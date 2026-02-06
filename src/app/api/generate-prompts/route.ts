@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import JSON5 from "json5";
 
 const XAI_API_URL = "https://api.x.ai/v1/chat/completions";
 
@@ -50,6 +51,33 @@ Respond with ONLY valid JSON in this exact format, no markdown fences:
 }
 
 The "image_assignment" array maps each clip (index 0-2) to which image number (1-indexed) should be used for that clip. For example [1, 1, 2] means clips 1 and 2 use image 1, clip 3 uses image 2.`;
+
+function extractJSONObject(text: string): string | null {
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first === -1 || last === -1 || last <= first) return null;
+  return text.slice(first, last + 1);
+}
+
+function parseModelJSON(content: string): unknown {
+  // Strip common markdown fencing, then isolate the JSON object in case the model added extra text.
+  const cleaned = content
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  const jsonBlock = extractJSONObject(cleaned) ?? cleaned;
+
+  try {
+    return JSON.parse(jsonBlock);
+  } catch {
+    // JSON5 tolerates common "almost JSON" model output:
+    // - unquoted property names
+    // - single-quoted strings
+    // - trailing commas
+    return JSON5.parse(jsonBlock);
+  }
+}
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.XAI_API_KEY;
@@ -149,16 +177,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the JSON response — strip markdown fences if present
-    const cleaned = content
-      .replace(/```json\s*/g, "")
-      .replace(/```\s*/g, "")
-      .trim();
+    let parsed: unknown;
+    try {
+      parsed = parseModelJSON(String(content));
+    } catch (e) {
+      // Keep the user-facing error short; log enough context to debug prompt/model issues.
+      console.error("xAI returned non-parseable JSON. Raw content (truncated):", {
+        preview: String(content).slice(0, 2000),
+      });
+      throw e;
+    }
 
-    const parsed = JSON.parse(cleaned);
+    if (!parsed || typeof parsed !== "object") {
+      return NextResponse.json(
+        { error: "Invalid response format from xAI" },
+        { status: 500 }
+      );
+    }
+
+    const parsedObj = parsed as Record<string, unknown>;
+    const clip1 = parsedObj["clip_1"];
+    const clip2 = parsedObj["clip_2"];
+    const clip3 = parsedObj["clip_3"];
 
     // Validate shape
-    if (!parsed.clip_1 || !parsed.clip_2 || !parsed.clip_3) {
+    if (
+      typeof clip1 !== "string" ||
+      typeof clip2 !== "string" ||
+      typeof clip3 !== "string"
+    ) {
       return NextResponse.json(
         { error: "Invalid response format from xAI" },
         { status: 500 }
@@ -169,19 +216,23 @@ export async function POST(request: NextRequest) {
       prompts: string[];
       imageAssignment?: number[];
     } = {
-      prompts: [parsed.clip_1, parsed.clip_2, parsed.clip_3],
+      prompts: [clip1, clip2, clip3],
     };
 
     // Include image assignment if present (for I2V mode)
     if (
       hasImages &&
-      parsed.image_assignment &&
-      Array.isArray(parsed.image_assignment)
+      Array.isArray(parsedObj["image_assignment"])
     ) {
+      const assignmentRaw = parsedObj["image_assignment"] as unknown[];
       // Convert from 1-indexed to 0-indexed
-      result.imageAssignment = parsed.image_assignment.map(
-        (n: number) => n - 1
-      );
+      const assignment = assignmentRaw
+        .map((n) => (typeof n === "number" ? n : Number(n)))
+        .filter((n) => Number.isFinite(n));
+
+      if (assignment.length === 3) {
+        result.imageAssignment = assignment.map((n) => n - 1);
+      }
     }
 
     return NextResponse.json(result);

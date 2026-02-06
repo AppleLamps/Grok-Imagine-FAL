@@ -68,6 +68,7 @@ export default function Home() {
       setClips([{ ...defaults }, { ...defaults }, { ...defaults }]);
       setVideos([null, null, null]);
       setClipStatuses(["", "", ""]);
+      setAiGeneratedPrompts(["", "", ""]);
       setError(null);
     },
     [mode]
@@ -77,24 +78,19 @@ export default function Home() {
     setClips((prev) => prev.map((c, i) => (i === index ? config : c)));
   }, []);
 
-  const handlePromptsGenerated = useCallback(
-    (prompts: string[], imageAssignment?: number[]) => {
-      setClips((prev) =>
-        prev.map((clip, i) => {
-          const updated = { ...clip, prompt: prompts[i] || clip.prompt };
+  // Track AI-generated prompts to detect user edits
+  const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<string[]>([
+    "",
+    "",
+    "",
+  ]);
 
-          // If Grok assigned images to clips (I2V mode with standalone images
-          // from master prompt), we let the master prompt component handle the
-          // image distribution via the assignment array. The actual image files
-          // on clip forms stay as-is — the user can manually adjust them.
-          // The imageAssignment is informational for now.
-
-          return updated;
-        })
-      );
-    },
-    []
-  );
+  const handlePromptsGenerated = useCallback((prompts: string[]) => {
+    setAiGeneratedPrompts(prompts);
+    setClips((prev) =>
+      prev.map((clip, i) => ({ ...clip, prompt: prompts[i] || clip.prompt }))
+    );
+  }, []);
 
   // Upload a single image file to FAL storage
   const uploadImageToFal = async (file: File): Promise<string> => {
@@ -112,6 +108,21 @@ export default function Home() {
     }
     return true;
   })();
+
+  // Warnings
+  const hasAspectRatioMismatch =
+    new Set(clips.map((c) => c.aspect_ratio)).size > 1;
+
+  const totalDuration = clips.reduce((sum, c) => sum + c.duration, 0);
+  const hasDurationImbalance = (() => {
+    const durations = clips.map((c) => c.duration);
+    return Math.max(...durations) > Math.min(...durations) * 3;
+  })();
+
+  const clipModified = clips.map(
+    (clip, i) =>
+      aiGeneratedPrompts[i] !== "" && clip.prompt !== aiGeneratedPrompts[i]
+  );
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate) return;
@@ -436,10 +447,22 @@ export default function Home() {
                     onChange={(c) => updateClip(i, c)}
                     disabled={isGenerating}
                     mode={mode}
+                    isModified={clipModified[i]}
                   />
                 </div>
               ))}
             </div>
+
+            {/* Aspect ratio mismatch warning */}
+            {hasAspectRatioMismatch && !isGenerating && (
+              <div className="mt-6 flex items-start gap-3 p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/[0.05]">
+                <AlertCircle className="h-4 w-4 text-yellow-400/70 mt-0.5 shrink-0" />
+                <p className="text-sm text-yellow-400/80">
+                  Clips have different aspect ratios — the final ad may look
+                  inconsistent when combined.
+                </p>
+              </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -483,6 +506,17 @@ export default function Home() {
                     : "All 3 prompts required"}
                 </span>
               )}
+
+              <div className="flex items-center gap-3 ml-auto">
+                <span className="text-[11px] font-mono text-white/30 tabular-nums">
+                  Total: {totalDuration}s
+                </span>
+                {hasDurationImbalance && (
+                  <span className="text-[11px] font-mono text-yellow-400/60">
+                    Uneven clip lengths
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Results */}

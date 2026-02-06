@@ -1,26 +1,19 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Sparkles,
   Loader2,
   ChevronDown,
   ChevronUp,
-  ImagePlus,
-  X,
-  Eye,
 } from "lucide-react";
 import type { GenerationMode } from "@/lib/workflow";
 
 interface MasterPromptProps {
-  onPromptsGenerated: (
-    prompts: string[],
-    imageAssignment?: number[]
-  ) => void;
+  onPromptsGenerated: (prompts: string[]) => void;
   disabled?: boolean;
   mode: GenerationMode;
   /** Base64 data URIs of uploaded images (from clip forms) for Grok analysis */
@@ -38,47 +31,12 @@ export function MasterPrompt({
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
 
-  // Standalone image uploads (separate from clip-level images)
-  const [standaloneImages, setStandaloneImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const isI2V = mode === "image-to-video";
 
-  // Gather images to send to Grok: standalone uploads (I2V) or clip images
+  // Gather images to send to Grok from clip forms
   const imagesToAnalyze = isI2V
-    ? standaloneImages.length > 0
-      ? standaloneImages
-      : clipImages.filter((img): img is string => !!img)
+    ? clipImages.filter((img): img is string => !!img)
     : [];
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const newImages: string[] = [];
-    let loaded = 0;
-
-    files.slice(0, 3 - standaloneImages.length).forEach((file) => {
-      if (!file.type.match(/^image\/(jpeg|jpg|png|webp)$/)) return;
-      if (file.size > 20 * 1024 * 1024) return;
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        newImages.push(reader.result as string);
-        loaded++;
-        if (loaded === files.length || newImages.length >= 3) {
-          setStandaloneImages((prev) => [...prev, ...newImages].slice(0, 3));
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const removeStandaloneImage = (index: number) => {
-    setStandaloneImages((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const handleGenerate = async () => {
     if (!masterPrompt.trim() || isGenerating) return;
@@ -113,7 +71,7 @@ export function MasterPrompt({
         Array.isArray(data.prompts) &&
         data.prompts.length === 3
       ) {
-        onPromptsGenerated(data.prompts, data.imageAssignment);
+        onPromptsGenerated(data.prompts);
       } else {
         throw new Error("Unexpected response format");
       }
@@ -145,7 +103,7 @@ export function MasterPrompt({
             </h2>
             <p className="text-[11px] text-white/30 font-mono mt-0.5">
               {isI2V
-                ? "Grok analyzes your images + concept to create motion prompts"
+                ? "Grok analyzes your clip images + concept to create motion prompts"
                 : "grok-4-1-fast-reasoning generates 3 detailed clip prompts"}
             </p>
           </div>
@@ -160,89 +118,6 @@ export function MasterPrompt({
       {/* Expandable content */}
       {isExpanded && (
         <div className="px-5 pb-5 space-y-4">
-          {/* Image upload area for I2V mode */}
-          {isI2V && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-white/40 font-mono uppercase tracking-wider">
-                  Reference Images
-                  <span className="text-white/20 ml-1">
-                    ({standaloneImages.length}/3)
-                  </span>
-                </Label>
-                {imagesToAnalyze.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Eye className="h-3 w-3 text-purple-400/50" />
-                    <span className="text-[10px] font-mono text-purple-400/50">
-                      Grok will analyze {imagesToAnalyze.length} image
-                      {imagesToAnalyze.length > 1 ? "s" : ""}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                {/* Uploaded images */}
-                {standaloneImages.map((img, i) => (
-                  <div
-                    key={i}
-                    className="relative group/thumb w-24 h-24 rounded-lg overflow-hidden border border-white/[0.08] bg-black shrink-0"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img}
-                      alt={`Reference ${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <Badge className="absolute bottom-1 left-1 bg-black/60 text-white/60 text-[9px] font-mono border-0 h-4 px-1">
-                      {i + 1}
-                    </Badge>
-                    <button
-                      type="button"
-                      onClick={() => removeStandaloneImage(i)}
-                      title={`Remove image ${i + 1}`}
-                      className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
-                    >
-                      <X className="h-2.5 w-2.5 text-white/60" />
-                    </button>
-                  </div>
-                ))}
-
-                {/* Add button */}
-                {standaloneImages.length < 3 && (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={disabled || isGenerating}
-                    className="w-24 h-24 rounded-lg border border-dashed border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.15] transition-all duration-200 flex flex-col items-center justify-center gap-1.5 disabled:opacity-30 disabled:pointer-events-none shrink-0"
-                  >
-                    <ImagePlus className="h-4 w-4 text-white/20" />
-                    <span className="text-[9px] font-mono text-white/20">
-                      Add
-                    </span>
-                  </button>
-                )}
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  aria-label="Upload reference images"
-                />
-              </div>
-
-              {standaloneImages.length > 0 && (
-                <p className="text-[10px] font-mono text-white/20">
-                  Grok will analyze these images and assign each to the best
-                  clip. Images will also be sent to FAL for video generation.
-                </p>
-              )}
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label
               htmlFor="master-prompt"
@@ -254,7 +129,7 @@ export function MasterPrompt({
               id="master-prompt"
               placeholder={
                 isI2V
-                  ? "Describe your ad concept... Grok will analyze your uploaded images and create motion prompts for each clip."
+                  ? "Describe your ad concept... Grok will analyze your clip images and create motion prompts for each."
                   : "Describe your ad concept... e.g. 'A luxury electric car commercial showcasing speed, elegance, and sustainability.'"
               }
               value={masterPrompt}

@@ -20,6 +20,7 @@ export function VideoResultCard({
   status,
 }: VideoResultCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const showLoadingPlaceholder = isLoading && !video;
 
   return (
     <div className="group relative">
@@ -50,17 +51,27 @@ export function VideoResultCard({
       </div>
 
       {/* Video Container */}
-      <div className="relative aspect-video rounded-lg overflow-hidden bg-white/[0.02] border border-white/[0.06]">
+      <div
+        className={`relative aspect-video rounded-lg overflow-hidden bg-white/[0.02] border border-white/[0.06] ${
+          showLoadingPlaceholder ? "gold-shimmer" : ""
+        }`}
+      >
         {/* Loading State */}
-        {isLoading && !video && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <div className="relative">
-              <div className="h-8 w-8 rounded-full border border-white/10" />
-              <div className="absolute inset-0 h-8 w-8 rounded-full border border-t-white/60 animate-spin" />
+        {showLoadingPlaceholder && (
+          <div className="absolute inset-0">
+            {/* Base sheen */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/40" />
+
+            {/* Skeleton content */}
+            <div className="absolute inset-0 p-4 flex flex-col justify-end gap-2">
+              <div className="h-2.5 w-[72%] rounded bg-white/[0.10]" />
+              <div className="h-2 w-[52%] rounded bg-white/[0.08]" />
+              <div className="pt-1">
+                <span className="text-[11px] font-mono text-amber-200/40">
+                  {status || "Generating..."}
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] font-mono text-white/30">
-              {status || "Processing..."}
-            </span>
           </div>
         )}
 
@@ -168,6 +179,13 @@ export function VideoResultsGrid({
           />
         ))}
       </div>
+
+      {hasAnyVideo && !isLoading && (
+        <p className="text-[11px] font-mono text-white/20 text-center pt-2">
+          Download your clips and combine them in your video editor to create
+          the final ad.
+        </p>
+      )}
     </div>
   );
 }

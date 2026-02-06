@@ -135,6 +135,40 @@
   animation: pulse-slow 2s ease-in-out infinite;
 }
 
+/* Golden shimmer loading state (for video generation placeholders) */
+@keyframes gold-shimmer-sweep {
+  0% { transform: translateX(-60%) skewX(-12deg); opacity: 0.0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateX(60%) skewX(-12deg); opacity: 0.0; }
+}
+.gold-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.gold-shimmer::before {
+  content: "";
+  position: absolute;
+  inset: -40% -60%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(234, 179, 8, 0.10) 38%,
+    rgba(250, 204, 21, 0.30) 50%,
+    rgba(234, 179, 8, 0.10) 62%,
+    transparent 100%
+  );
+  animation: gold-shimmer-sweep 1.35s ease-in-out infinite;
+  pointer-events: none;
+}
+.gold-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 50% at 50% 40%, rgba(234, 179, 8, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
 /* Gradient border effect */
 .gradient-border {
   position: relative;

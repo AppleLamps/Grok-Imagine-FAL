@@ -30,6 +30,7 @@ interface ClipFormProps {
   onChange: (config: ClipConfig) => void;
   disabled?: boolean;
   mode: GenerationMode;
+  isModified?: boolean;
 }
 
 export function ClipForm({
@@ -38,6 +39,7 @@ export function ClipForm({
   onChange,
   disabled,
   mode,
+  isModified,
 }: ClipFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isI2V = mode === "image-to-video";
@@ -92,6 +94,14 @@ export function ClipForm({
         <h3 className="text-sm font-medium tracking-wide text-white/80 uppercase">
           Clip {index + 1}
         </h3>
+        {isModified && (
+          <Badge
+            variant="outline"
+            className="border-orange-500/20 text-orange-400/60 text-[10px] font-mono"
+          >
+            Modified
+          </Badge>
+        )}
         <Badge
           variant="outline"
           className="ml-auto border-white/10 text-white/30 text-[10px] font-mono"
