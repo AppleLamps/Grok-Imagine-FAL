@@ -21,7 +21,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Grok Imagine — Ad Generator",
   description:
-    "Generate parallel AI video ads using xAI Grok Imagine via FAL workflows",
+    "Agentic AI ad generator — Grok plans, generates, and sequences 3-scene video ads using the xAI API",
 };
 
 export default function RootLayout({
@@ -32,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} font-sans antialiased noise-bg app-bg`}
+        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} font-sans antialiased`}
       >
         {children}
       </body>

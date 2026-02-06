@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import JSON5 from "json5";
 
 const XAI_API_URL = "https://api.x.ai/v1/chat/completions";
 
-const SYSTEM_PROMPT_TEXT = `You are an expert video ad creative director. Given a master concept for an advertisement, you must generate exactly 3 detailed video clip prompts that together form a cohesive ad sequence.
+const SYSTEM_PROMPT_TEXT = `You are an expert video ad creative director. Given a master concept for an advertisement, generate exactly 3 detailed video clip prompts that together form a cohesive ad sequence.
 
 Each prompt should be a rich, cinematic description optimized for AI video generation. Include:
 - Camera movement and angles (tracking shot, close-up, aerial, handheld, etc.)
@@ -16,14 +15,7 @@ Each prompt should be a rich, cinematic description optimized for AI video gener
 The 3 clips should flow as a narrative sequence:
 - Clip 1: The hook / opening — grabs attention immediately
 - Clip 2: The core message / product showcase — delivers the value
-- Clip 3: The closer / call-to-action — leaves a lasting impression
-
-Respond with ONLY valid JSON in this exact format, no markdown fences:
-{
-  "clip_1": "detailed prompt for clip 1...",
-  "clip_2": "detailed prompt for clip 2...",
-  "clip_3": "detailed prompt for clip 3..."
-}`;
+- Clip 3: The closer / call-to-action — leaves a lasting impression`;
 
 const SYSTEM_PROMPT_IMAGE = `You are an expert video ad creative director. You will be given a master concept for an advertisement along with 1-3 reference images. Analyze each image carefully and generate exactly 3 detailed video clip prompts that together form a cohesive ad sequence.
 
@@ -42,42 +34,50 @@ The 3 clips should flow as a narrative sequence:
 - Clip 2: The core message / product showcase — controlled, elegant motion
 - Clip 3: The closer / call-to-action — impactful final movement
 
-Respond with ONLY valid JSON in this exact format, no markdown fences:
-{
-  "clip_1": "detailed motion prompt for clip 1...",
-  "clip_2": "detailed motion prompt for clip 2...",
-  "clip_3": "detailed motion prompt for clip 3...",
-  "image_assignment": [1, 2, 3]
-}
-
 The "image_assignment" array maps each clip (index 0-2) to which image number (1-indexed) should be used for that clip. For example [1, 1, 2] means clips 1 and 2 use image 1, clip 3 uses image 2.`;
 
-function extractJSONObject(text: string): string | null {
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first === -1 || last === -1 || last <= first) return null;
-  return text.slice(first, last + 1);
-}
+// JSON Schema for text-to-video structured output
+const TEXT_RESPONSE_SCHEMA = {
+  type: "json_schema" as const,
+  json_schema: {
+    name: "video_prompts",
+    strict: true,
+    schema: {
+      type: "object",
+      properties: {
+        clip_1: { type: "string", description: "Detailed cinematic prompt for clip 1 (the hook / opening)" },
+        clip_2: { type: "string", description: "Detailed cinematic prompt for clip 2 (core message / product showcase)" },
+        clip_3: { type: "string", description: "Detailed cinematic prompt for clip 3 (closer / call-to-action)" },
+      },
+      required: ["clip_1", "clip_2", "clip_3"],
+      additionalProperties: false,
+    },
+  },
+};
 
-function parseModelJSON(content: string): unknown {
-  // Strip common markdown fencing, then isolate the JSON object in case the model added extra text.
-  const cleaned = content
-    .replace(/```json\s*/gi, "")
-    .replace(/```\s*/g, "")
-    .trim();
-
-  const jsonBlock = extractJSONObject(cleaned) ?? cleaned;
-
-  try {
-    return JSON.parse(jsonBlock);
-  } catch {
-    // JSON5 tolerates common "almost JSON" model output:
-    // - unquoted property names
-    // - single-quoted strings
-    // - trailing commas
-    return JSON5.parse(jsonBlock);
-  }
-}
+// JSON Schema for image-to-video structured output
+const IMAGE_RESPONSE_SCHEMA = {
+  type: "json_schema" as const,
+  json_schema: {
+    name: "video_prompts_with_images",
+    strict: true,
+    schema: {
+      type: "object",
+      properties: {
+        clip_1: { type: "string", description: "Detailed motion prompt for clip 1 (the hook / opening)" },
+        clip_2: { type: "string", description: "Detailed motion prompt for clip 2 (core message / product showcase)" },
+        clip_3: { type: "string", description: "Detailed motion prompt for clip 3 (closer / call-to-action)" },
+        image_assignment: {
+          type: "array",
+          items: { type: "number" },
+          description: "Maps each clip (index 0-2) to which image number (1-indexed) should be used",
+        },
+      },
+      required: ["clip_1", "clip_2", "clip_3", "image_assignment"],
+      additionalProperties: false,
+    },
+  },
+};
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.XAI_API_KEY;
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "grok-4-1-fast-reasoning",
+        model: "grok-4-1-fast",
         messages: [
           {
             role: "system",
@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
           },
         ],
         temperature: 0.8,
+        response_format: hasImages ? IMAGE_RESPONSE_SCHEMA : TEXT_RESPONSE_SCHEMA,
       }),
     });
 
@@ -177,25 +178,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let parsed: unknown;
-    try {
-      parsed = parseModelJSON(String(content));
-    } catch (e) {
-      // Keep the user-facing error short; log enough context to debug prompt/model issues.
-      console.error("xAI returned non-parseable JSON. Raw content (truncated):", {
-        preview: String(content).slice(0, 2000),
-      });
-      throw e;
-    }
-
-    if (!parsed || typeof parsed !== "object") {
-      return NextResponse.json(
-        { error: "Invalid response format from xAI" },
-        { status: 500 }
-      );
-    }
-
-    const parsedObj = parsed as Record<string, unknown>;
+    // With response_format: json_schema, the API guarantees valid JSON
+    const parsedObj = JSON.parse(content) as Record<string, unknown>;
     const clip1 = parsedObj["clip_1"];
     const clip2 = parsedObj["clip_2"];
     const clip3 = parsedObj["clip_3"];
