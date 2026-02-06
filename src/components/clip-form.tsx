@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -11,12 +12,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ImagePlus, X } from "lucide-react";
 import {
-  ASPECT_RATIOS,
+  T2V_ASPECT_RATIOS,
+  I2V_ASPECT_RATIOS,
   RESOLUTIONS,
   type ClipConfig,
   type AspectRatio,
   type Resolution,
+  type GenerationMode,
 } from "@/lib/workflow";
 
 interface ClipFormProps {
@@ -24,9 +29,59 @@ interface ClipFormProps {
   config: ClipConfig;
   onChange: (config: ClipConfig) => void;
   disabled?: boolean;
+  mode: GenerationMode;
 }
 
-export function ClipForm({ index, config, onChange, disabled }: ClipFormProps) {
+export function ClipForm({
+  index,
+  config,
+  onChange,
+  disabled,
+  mode,
+}: ClipFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isI2V = mode === "image-to-video";
+  const aspectRatios = isI2V ? I2V_ASPECT_RATIOS : T2V_ASPECT_RATIOS;
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match(/^image\/(jpeg|jpg|png|webp)$/)) {
+      return;
+    }
+
+    // Validate size (20MB max per xAI docs)
+    if (file.size > 20 * 1024 * 1024) {
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      onChange({
+        ...config,
+        imageFile: file,
+        imagePreview: reader.result as string,
+        imageUrl: undefined, // Will be set after FAL upload
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    onChange({
+      ...config,
+      imageFile: undefined,
+      imagePreview: undefined,
+      imageUrl: undefined,
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="group relative space-y-5">
       {/* Header */}
@@ -45,17 +100,93 @@ export function ClipForm({ index, config, onChange, disabled }: ClipFormProps) {
         </Badge>
       </div>
 
+      {/* Image Upload (I2V mode) */}
+      {isI2V && (
+        <div className="space-y-2">
+          <Label className="text-xs text-white/40 font-mono uppercase tracking-wider">
+            Source Image
+          </Label>
+
+          {config.imagePreview ? (
+            <div className="relative group/img rounded-lg overflow-hidden border border-white/[0.08] bg-black">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={config.imagePreview}
+                alt={`Clip ${index + 1} source`}
+                className="w-full h-32 object-cover"
+              />
+              {/* Upload status indicator */}
+              {config.imageUrl && (
+                <div className="absolute top-2 left-2">
+                  <Badge className="bg-green-500/20 text-green-400/80 border-green-500/20 text-[9px] font-mono">
+                    Uploaded
+                  </Badge>
+                </div>
+              )}
+              {config.imageFile && !config.imageUrl && (
+                <div className="absolute top-2 left-2">
+                  <Badge className="bg-yellow-500/20 text-yellow-400/80 border-yellow-500/20 text-[9px] font-mono">
+                    Ready
+                  </Badge>
+                </div>
+              )}
+              {/* Remove button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleRemoveImage}
+                disabled={disabled}
+                className="absolute top-2 right-2 h-6 w-6 p-0 bg-black/60 hover:bg-black/80 text-white/60 hover:text-white rounded-full opacity-0 group-hover/img:opacity-100 transition-opacity"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled}
+              className="w-full h-32 rounded-lg border border-dashed border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.15] transition-all duration-200 flex flex-col items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <div className="h-8 w-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+                <ImagePlus className="h-4 w-4 text-white/25" />
+              </div>
+              <span className="text-[11px] font-mono text-white/25">
+                Drop or click to upload
+              </span>
+              <span className="text-[9px] font-mono text-white/15">
+                JPG, PNG, WebP · 20MB max
+              </span>
+            </button>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={handleImageSelect}
+            className="hidden"
+            aria-label={`Upload image for clip ${index + 1}`}
+          />
+        </div>
+      )}
+
       {/* Prompt */}
       <div className="space-y-2">
         <Label
           htmlFor={`prompt-${index}`}
           className="text-xs text-white/40 font-mono uppercase tracking-wider"
         >
-          Prompt
+          {isI2V ? "Motion Prompt" : "Prompt"}
         </Label>
         <Textarea
           id={`prompt-${index}`}
-          placeholder="Describe the scene for this clip..."
+          placeholder={
+            isI2V
+              ? "Describe the motion and action for this image..."
+              : "Describe the scene for this clip..."
+          }
           value={config.prompt}
           onChange={(e) => onChange({ ...config, prompt: e.target.value })}
           disabled={disabled}
@@ -102,7 +233,7 @@ export function ClipForm({ index, config, onChange, disabled }: ClipFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#0a0a0a] border-white/10">
-              {ASPECT_RATIOS.map((ratio) => (
+              {aspectRatios.map((ratio) => (
                 <SelectItem
                   key={ratio}
                   value={ratio}
