@@ -86,42 +86,42 @@ export function MasterPrompt({
   };
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.02] overflow-hidden">
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.015] overflow-hidden">
       {/* Header — always visible */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-5 pb-4 hover:bg-white/[0.01] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.01] transition-colors"
       >
-        <div className="flex items-center gap-3">
-          <div className="h-7 w-7 rounded-md bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/[0.08] flex items-center justify-center">
-            <Sparkles className="h-3.5 w-3.5 text-purple-300/70" />
+        <div className="flex items-center gap-2.5">
+          <div className="h-6 w-6 rounded-md bg-gradient-to-br from-violet-500/20 to-cyan-500/20 border border-white/[0.06] flex items-center justify-center">
+            <Sparkles className="h-3 w-3 text-violet-300/60" />
           </div>
           <div className="text-left">
-            <h2 className="text-sm font-medium tracking-tight text-white/90">
+            <h2 className="text-xs font-medium tracking-tight text-white/80">
               Master Prompt
+              <span className="ml-2 text-[10px] font-mono text-white/25">
+                {isI2V
+                  ? "image analysis + prompts"
+                  : "grok-4-1-fast"}
+              </span>
             </h2>
-            <p className="text-[11px] text-white/30 font-mono mt-0.5">
-              {isI2V
-                ? "Grok analyzes your clip images + concept to create motion prompts"
-                : "grok-4-1-fast-reasoning generates 3 detailed clip prompts"}
-            </p>
           </div>
         </div>
         {isExpanded ? (
-          <ChevronUp className="h-4 w-4 text-white/20" />
+          <ChevronUp className="h-3.5 w-3.5 text-white/20" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-white/20" />
+          <ChevronDown className="h-3.5 w-3.5 text-white/20" />
         )}
       </button>
 
       {/* Expandable content */}
       {isExpanded && (
-        <div className="px-5 pb-5 space-y-4">
-          <div className="space-y-2">
+        <div className="px-4 pb-4 space-y-3">
+          <div className="space-y-1.5">
             <Label
               htmlFor="master-prompt"
-              className="text-xs text-white/40 font-mono uppercase tracking-wider"
+              className="text-[10px] text-white/35 font-mono uppercase tracking-wider"
             >
               Ad Concept
             </Label>
@@ -135,7 +135,7 @@ export function MasterPrompt({
               value={masterPrompt}
               onChange={(e) => setMasterPrompt(e.target.value)}
               disabled={disabled || isGenerating}
-              className="min-h-[120px] resize-none bg-white/[0.03] border-white/[0.06] text-sm text-white/90 placeholder:text-white/15 focus:border-white/20 focus:bg-white/[0.05] transition-all duration-200"
+              className="min-h-[90px] resize-none bg-white/[0.03] border-white/[0.06] text-sm text-white/90 placeholder:text-white/15 focus:border-white/20 focus:bg-white/[0.05] transition-all duration-200"
             />
           </div>
 
@@ -149,7 +149,7 @@ export function MasterPrompt({
             <Button
               onClick={handleGenerate}
               disabled={!masterPrompt.trim() || isGenerating || disabled}
-              className="h-9 px-5 bg-white/[0.08] text-white/80 text-xs font-medium tracking-tight hover:bg-white/[0.12] hover:text-white disabled:opacity-30 transition-all duration-200 gap-2 border border-white/[0.08] rounded-lg"
+              className="h-8 px-4 bg-white/[0.06] text-white/70 text-[11px] font-medium tracking-tight hover:bg-white/[0.12] hover:text-white disabled:opacity-30 transition-all duration-200 gap-1.5 border border-white/[0.08] rounded-md"
             >
               {isGenerating ? (
                 <>

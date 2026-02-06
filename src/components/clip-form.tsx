@@ -85,13 +85,13 @@ export function ClipForm({
   };
 
   return (
-    <div className="group relative space-y-5">
+    <div className="group relative space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px] font-mono font-medium text-white/60">
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-5 w-5 items-center justify-center rounded-md bg-white/10 text-[10px] font-mono font-medium text-white/60">
           {index + 1}
         </div>
-        <h3 className="text-sm font-medium tracking-wide text-white/80 uppercase">
+        <h3 className="text-xs font-medium tracking-wide text-white/70 uppercase">
           Clip {index + 1}
         </h3>
         {isModified && (
@@ -200,7 +200,7 @@ export function ClipForm({
           value={config.prompt}
           onChange={(e) => onChange({ ...config, prompt: e.target.value })}
           disabled={disabled}
-          className="min-h-[100px] resize-none bg-white/[0.03] border-white/[0.06] text-sm text-white/90 placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.05] transition-all duration-200"
+          className="min-h-[80px] resize-none bg-white/[0.03] border-white/[0.06] text-sm text-white/90 placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.05] transition-all duration-200"
         />
       </div>
 

@@ -353,49 +353,37 @@ export default function Home() {
 
       {/* Main */}
       <main className="flex-1 pt-14">
-        {/* Hero */}
-        <section className="relative py-20 md:py-28 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] via-transparent to-transparent" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-white/[0.015] rounded-full blur-[120px]" />
-
-          <div className="relative max-w-6xl mx-auto px-6">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] mb-6">
-                <Film className="h-3 w-3 text-white/50" />
-                <span className="text-[11px] font-mono text-white/50">
-                  xAI Grok Imagine Video · 3 Parallel Clips
-                </span>
+        {/* Compact Hero + Controls */}
+        <section className="pb-16">
+          <div className="max-w-6xl mx-auto px-6">
+            {/* Hero row — tight, inline */}
+            <div className="pt-8 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 border border-white/[0.06]">
+                  <Film className="h-5 w-5 text-violet-300/70" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold tracking-tight leading-tight">
+                    Generate Ad Videos
+                    <span className="ml-2 text-[10px] font-mono text-white/25 align-middle border border-white/[0.08] rounded px-1.5 py-0.5">
+                      3 Parallel Clips
+                    </span>
+                  </h1>
+                  <p className="text-[13px] text-white/35 mt-0.5">
+                    Describe a concept, let Grok craft scene prompts, generate with xAI Imagine Video.
+                  </p>
+                </div>
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tighter leading-[1.05] mb-4">
-                Generate
-                <br />
-                <span className="text-white/40">ad videos.</span>
-              </h1>
-
-              <p className="text-base md:text-lg text-white/40 leading-relaxed max-w-md">
-                Describe your ad concept and let Grok craft 3 detailed scene
-                prompts. Generate from text or images in parallel with Grok
-                Imagine Video.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Generator */}
-        <section className="pb-24">
-          <div className="max-w-6xl mx-auto px-6">
-            {/* Mode Toggle */}
-            <div className="mb-8">
-              <div className="inline-flex items-center rounded-lg border border-white/[0.08] bg-white/[0.02] p-1">
+              {/* Mode Toggle — right-aligned */}
+              <div className="inline-flex items-center rounded-lg border border-white/[0.08] bg-white/[0.02] p-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleModeChange("text-to-video")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
-                    !isI2V
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${!isI2V
                       ? "bg-white text-black"
                       : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
-                  }`}
+                    }`}
                 >
                   <Type className="h-3.5 w-3.5" />
                   Text to Video
@@ -403,11 +391,10 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => handleModeChange("image-to-video")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
-                    isI2V
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${isI2V
                       ? "bg-white text-black"
                       : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
-                  }`}
+                    }`}
                 >
                   <ImageIcon className="h-3.5 w-3.5" />
                   Image to Video
@@ -415,8 +402,10 @@ export default function Home() {
               </div>
             </div>
 
+            <Separator className="bg-white/[0.06]" />
+
             {/* Master Prompt */}
-            <div className="mb-8">
+            <div className="mt-6 mb-6">
               <MasterPrompt
                 onPromptsGenerated={handlePromptsGenerated}
                 disabled={isGenerating}
@@ -425,21 +414,12 @@ export default function Home() {
               />
             </div>
 
-            {/* Divider */}
-            <div className="flex items-center gap-4 mb-8">
-              <Separator className="flex-1 bg-white/[0.06]" />
-              <span className="text-[10px] font-mono text-white/20 uppercase tracking-widest">
-                Clip Details
-              </span>
-              <Separator className="flex-1 bg-white/[0.06]" />
-            </div>
-
             {/* Clip Forms */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {clips.map((clip, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-colors hover:border-white/[0.1] hover:bg-white/[0.03]"
+                  className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-4 transition-colors hover:border-white/[0.12] hover:bg-white/[0.025]"
                 >
                   <ClipForm
                     index={i}
@@ -479,12 +459,12 @@ export default function Home() {
             )}
 
             {/* Generate Button */}
-            <div className="mt-8 flex items-center gap-4">
+            <div className="mt-6 flex items-center gap-4">
               <Button
                 onClick={handleGenerate}
                 disabled={!canGenerate}
                 size="lg"
-                className="h-12 px-8 bg-white text-black font-medium text-sm tracking-tight hover:bg-white/90 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 transition-all duration-200 gap-2 rounded-lg"
+                className="h-10 px-7 bg-white text-black font-medium text-sm tracking-tight hover:bg-white/90 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 transition-all duration-200 gap-2 rounded-lg"
               >
                 {isGenerating ? (
                   <>
@@ -520,7 +500,7 @@ export default function Home() {
             </div>
 
             {/* Results */}
-            <div className="mt-16">
+            <div className="mt-12">
               <VideoResultsGrid
                 videos={videos}
                 isLoading={isGenerating}
